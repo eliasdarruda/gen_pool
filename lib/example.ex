@@ -1,4 +1,4 @@
-defmodule Test do
+defmodule ExampleGenPool do
   use GenPool, pool_size: 5
 
   defmodule State do

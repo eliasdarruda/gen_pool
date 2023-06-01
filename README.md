@@ -4,6 +4,19 @@
 
 Gen Pool with sbroker
 
+```Elixir
+iex(1)> ExampleGenPool.start_link()
+
+iex(2)> ExampleGenPool.add(5)
+5
+
+iex(3)> ExampleGenPool.add_casting(5)
+:ok
+
+iex(4)> ExampleGenPool.add(5)
+15
+```
+
 ## Installation
 
 If [available in Hex](https://hex.pm/docs/publish), the package can be installed
