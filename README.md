@@ -2,7 +2,14 @@
 
 ## WIP
 
-Gen Pool with sbroker
+A GenServer with a local state but with the messages pooled with sbroker.
+
+The goal is to:
+
+- Avoid having a single process queue becoming a bottleneck.
+- Interact with the process as you would interact with any GenServer.
+- Have ways to handle backpressure.
+- Keep state atomicity even though the process is pooled.
 
 ```Elixir
 iex(1)> ExampleGenPool.start_link()
@@ -19,17 +26,14 @@ iex(4)> ExampleGenPool.add(5)
 
 ## Installation
 
-If [available in Hex](https://hex.pm/docs/publish), the package can be installed
-by adding `gen_pool` to your list of dependencies in `mix.exs`:
+This [package](https://hex.pm/packages/gen_pool) can be installed by adding `gen_pool` to your list of dependencies in `mix.exs`:
 
 ```elixir
 def deps do
   [
-    {:gen_pool, "~> 0.1.0"}
+    {:gen_pool, "~> 0.0.1"}
   ]
 end
 ```
 
-Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_doc)
-and published on [HexDocs](https://hexdocs.pm). Once published, the docs can
-be found at <https://hexdocs.pm/gen_pool>.
+Documentation can be found at <https://hexdocs.pm/gen_pool>.
