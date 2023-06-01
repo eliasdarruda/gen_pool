@@ -33,7 +33,7 @@ defmodule ExampleGenPool do
 
   @impl true
   def handle_cast({:add, value}, state) do
-    {:reply, state.count + value, %State{state | count: state.count + value}}
+    {:noreply, %State{state | count: state.count + value}}
   end
 
   def add(value) do
