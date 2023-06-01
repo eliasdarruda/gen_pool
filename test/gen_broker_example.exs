@@ -27,4 +27,12 @@ defmodule ExampleGenPool do
   def add_casting(value) do
     GenPool.cast(__MODULE__, {:add, value})
   end
+
+  def get_state() do
+    GenPool.get_state(__MODULE__)
+  end
+
+  def stop do
+    GenPool.stop(__MODULE__)
+  end
 end
