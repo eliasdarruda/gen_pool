@@ -2,9 +2,9 @@
 
 ## WIP
 
-A GenServer with a local state but with the messages pooled with sbroker.
+A process with a centralized local state and a pooled message queue using [sbroker](https://github.com/fishcakez/sbroker).
 
-The goal is to:
+### The goal is to:
 
 - Avoid having a single process queue becoming a bottleneck.
 - Interact with the process as you would interact with any GenServer.
@@ -44,15 +44,16 @@ defmodule ExampleGenPool do
     GenPool.cast(__MODULE__, {:add, value})
   end
 end
+```
 
+Running in iex:
+
+```Elixir
 iex(1)> ExampleGenPool.start_link()
-
 iex(2)> ExampleGenPool.add(5)
 5
-
 iex(3)> ExampleGenPool.add_casting(5)
 :ok
-
 iex(4)> ExampleGenPool.add(5)
 15
 ```
