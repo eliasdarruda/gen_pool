@@ -2,7 +2,7 @@
 
 ## WIP
 
-A process with a centralized local state and a pooled message queue using [sbroker](https://github.com/fishcakez/sbroker).
+A pooled process with the option to centralize state, decouple the message queue and handle backpressure using [sbroker](https://github.com/fishcakez/sbroker).
 
 ### The goal is to:
 
