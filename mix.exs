@@ -26,7 +26,9 @@ defmodule GenPool.MixProject do
   defp deps do
     [
       {:sbroker, "~> 1.0.0"},
-      {:ex_doc, ">= 0.0.0", only: :dev, runtime: false}
+      {:ane, "~> 0.1.1"},
+      {:ex_doc, ">= 0.0.0", only: :dev, runtime: false},
+      {:benchee, "~> 1.0", only: :dev}
     ]
   end
 

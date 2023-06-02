@@ -8,8 +8,9 @@ A process with a centralized local state and a pooled message queue using [sbrok
 
 - Avoid having a single process queue becoming a bottleneck.
 - Interact with the process as you would interact with any GenServer.
-- Have ways to handle backpressure.
-- Keep state atomicity even though the process is pooled.
+- Have ways to handle backpressure in the process requests.
+- Having the option to keep a centralized state with atomicity even though the process is pooled.
+- Decentralize message queue from the process implementation.
 
 ## Example
 

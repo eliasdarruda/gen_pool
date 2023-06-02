@@ -7,6 +7,6 @@ defprotocol GenPool.Backend do
   @type state :: term()
 
   def new(opts \\ [])
-  def put(backend, value)
+  def put(backend, new_state, prev_state \\ nil)
   def get(backend)
 end
