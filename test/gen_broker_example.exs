@@ -1,5 +1,10 @@
 defmodule ExampleGenPool do
-  use GenPool, pool_size: 5
+  use GenPool,
+    pool_size: 5,
+    shared_state?: true,
+    external_broker?: false,
+    broker: GenPool.DefaultBroker,
+    backend: %GenPool.Backend.Ane{}
 
   defmodule State do
     defstruct count: 0
@@ -34,5 +39,9 @@ defmodule ExampleGenPool do
 
   def stop do
     GenPool.stop(__MODULE__)
+  end
+
+  def start_link(opts \\ []) do
+    GenPool.start_link(__MODULE__, opts, [])
   end
 end

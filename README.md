@@ -16,7 +16,12 @@ A pooled process with the option to centralize state, decouple the message queue
 
 ```Elixir
 defmodule ExampleGenPool do
-  use GenPool, pool_size: 5 # this will spawn 5 processes
+  use GenPool,
+    pool_size: 5,
+    shared_state?: true,
+    external_broker?: false,
+    broker: GenPool.DefaultBroker,
+    backend: %GenPool.Backend.Ane{}
 
   defmodule State do
     defstruct count: 0
@@ -37,12 +42,46 @@ defmodule ExampleGenPool do
     {:noreply, %State{state | count: state.count + value}}
   end
 
+  def start_link(opts \\ []) do
+    GenPool.start_link(__MODULE__, opts, [])
+  end
+
   def add(value) do
     GenPool.call(__MODULE__, {:add, value})
   end
 
   def add_casting(value) do
     GenPool.cast(__MODULE__, {:add, value})
+  end
+end
+```
+
+Optionally you can define your own broker with:
+
+```Elixir
+defmodule MyGenPoolBroker do
+  use GenPool.Broker
+
+  @impl true
+  def process_queue do
+    [
+      queue_type: :filo,
+      timeout: :infinity
+    ]
+  end
+
+  @impl true
+  def client_queue do
+    [
+      queue_type: :fifo,
+      timeout: 10_000, # call timeout
+      min: 0,
+
+      # max value for backpressure
+      # if the message queue reaches this value
+      # it will throw {:error, :too_many_requests} on casts and calls
+      max: :infinity
+    ]
   end
 end
 ```
@@ -66,7 +105,7 @@ This [package](https://hex.pm/packages/gen_pool) can be installed by adding `gen
 ```elixir
 def deps do
   [
-    {:gen_pool, "~> 0.0.1"}
+    {:gen_pool, "~> 0.1.0"}
   ]
 end
 ```

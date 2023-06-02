@@ -6,7 +6,7 @@ defmodule GenPool.MixProject do
   def project do
     [
       app: :gen_pool,
-      version: "0.0.1",
+      version: "0.1.0",
       description: "Gen Pool",
       elixir: "~> 1.14",
       package: package(),
