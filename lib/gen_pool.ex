@@ -53,158 +53,26 @@ defmodule GenPool do
     quote location: :keep, bind_quoted: [opts: opts] do
       @behaviour GenPool
 
-      @broker Keyword.get(opts, :broker, GenPool.DefaultBroker)
-      @backend Keyword.get(opts, :backend, %GenPool.Backend.Ane{})
-      @pool_size Keyword.get(opts, :pool_size, 5)
+      @default_opts [
+        external_broker?: Keyword.get(opts, :external_broker?, false),
+        shared_state?: Keyword.get(opts, :shared_state?, true),
+        broker: Keyword.get(opts, :broker, GenPool.DefaultBroker),
+        backend: Keyword.get(opts, :backend, %GenPool.Backend.Ane{}),
+        pool_size: Keyword.get(opts, :pool_size, 5),
+        pool_module: __MODULE__
+      ]
 
       @doc false
-      def start_link(opts \\ [], process_opts \\ []) do
-        # GenServer.start_link(GenPool.ProcessManager, opts, process_opts)
-        spawn_link(fn ->
-          Process.register(self(), process_opts[:name] || __MODULE__)
-
-          unless Process.whereis(@broker) do
-            @broker.start_link(opts)
-          end
-
-          backend = GenPool.Backend.new(@backend)
-
-          for _i <- 1..@pool_size do
-            __start_child__(backend, self(), opts)
-          end
-
-          GenPool.cast(__MODULE__, {:__init__, opts})
-
-          __main_heartbeat__(backend, opts)
-        end)
+      def start_link(opts, process_opts \\ []) do
+        GenServer.start_link(
+          GenPool.ProcessManager,
+          opts,
+          process_opts
+        )
       end
 
-      def __broker__, do: @broker
-
-      defp __main_heartbeat__(backend, opts) do
-        receive do
-          {:DOWN, _, :process, _, reason} ->
-            __start_child__(backend, self(), opts)
-
-            __main_heartbeat__(backend, opts)
-        end
-      end
-
-      defp __start_child__(backend, parent_pid, opts) do
-        spawn_monitor(fn ->
-          tag = make_ref()
-
-          __process_loop__(tag, backend, parent_pid, opts)
-        end)
-      end
-
-      defp __process_loop__(tag, backend, parent_pid, opts) do
-        {:await, ^tag, _} = :sbroker.async_ask_r(@broker, self(), {self(), tag})
-
-        receive do
-          {^tag, {:go, ref, {:cast, origin_pid, {:__stop__, reason}}, _, _}} ->
-            state = GenPool.Backend.get(backend)
-
-            {:stop, reason, state}
-            |> __handle_reply__(backend, parent_pid, state, origin_pid, ref)
-
-            __process_loop__(tag, backend, parent_pid, opts)
-
-          {^tag, {:go, ref, {:cast, origin_pid, {:__continue__, params}}, _, _}} ->
-            state = GenPool.Backend.get(backend)
-
-            handle_continue(params, state)
-            |> __handle_reply__(backend, parent_pid, state, origin_pid, ref)
-
-            __process_loop__(tag, backend, parent_pid, opts)
-
-          {^tag, {:go, ref, {:cast, _from, {:__init__, opts}}, _, _}} ->
-            state = GenPool.Backend.get(backend)
-
-            case init(opts) do
-              {:ok, new_state} ->
-                GenPool.Backend.put(backend, new_state, state)
-
-              {:ok, new_state, {:continue, params}} ->
-                GenPool.Backend.put(backend, new_state, state)
-                GenPool.cast(__MODULE__, {:__continue__, params})
-            end
-
-            __process_loop__(tag, backend, parent_pid, opts)
-
-          {^tag, {:go, ref, {:call, origin_pid, :__get_state__}, _, _}} ->
-            state = GenPool.Backend.get(backend)
-
-            {:reply, state, state}
-            |> __handle_reply__(backend, parent_pid, state, origin_pid, ref)
-
-            __process_loop__(tag, backend, parent_pid, opts)
-
-          {^tag, {:go, ref, {:call, origin_pid, params}, _, _}} ->
-            state = GenPool.Backend.get(backend)
-
-            handle_call(params, origin_pid, state)
-            |> __handle_reply__(backend, parent_pid, state, origin_pid, ref)
-
-            __process_loop__(tag, backend, parent_pid, opts)
-
-          {^tag, {:go, ref, {:cast, origin_pid, params}, _, _}} ->
-            state = GenPool.Backend.get(backend)
-
-            handle_cast(params, state)
-            |> __handle_reply__(backend, parent_pid, state, origin_pid, ref)
-
-            __process_loop__(tag, backend, parent_pid, opts)
-
-          {:EXIT, _pid, reason} ->
-            state = GenPool.Backend.get(backend)
-
-            terminate(reason, state)
-            exit(reason)
-
-          message ->
-            state = GenPool.Backend.get(backend)
-
-            handle_info(message, state)
-            |> __handle_reply__(backend, parent_pid, state)
-
-            __process_loop__(tag, backend, parent_pid, opts)
-        end
-      end
-
-      defp __handle_reply__(reply, backend, parent_pid, prev_state, origin_pid \\ nil, ref \\ nil) do
-        case reply do
-          {:reply, response, state} ->
-            GenPool.Backend.put(backend, state, prev_state)
-
-            if not is_nil(origin_pid) and not is_nil(ref) do
-              send(origin_pid, {ref, response})
-            end
-
-          {:reply, response, state, _opts} ->
-            GenPool.Backend.put(backend, state, prev_state)
-
-            if not is_nil(origin_pid) and not is_nil(ref) do
-              send(origin_pid, {ref, response})
-            end
-
-          {:stop, reason, state, _opts} ->
-            GenPool.Backend.put(backend, state, prev_state)
-            Process.exit(parent_pid, reason)
-
-          {:stop, reason, state} ->
-            GenPool.Backend.put(backend, state, prev_state)
-            Process.exit(parent_pid, reason)
-
-          {:noreply, state} ->
-            GenPool.Backend.put(backend, state, prev_state)
-
-          {:noreply, state, _opts} ->
-            GenPool.Backend.put(backend, state, prev_state)
-        end
-
-        :ok
-      end
+      def __default_opts__, do: @default_opts
+      def __broker__, do: @default_opts[:broker]
 
       @doc false
       def handle_call(params, _from, _state) do
@@ -232,11 +100,15 @@ defmodule GenPool do
       end
 
       defoverridable GenPool
+      defoverridable(start_link: 1, start_link: 2)
     end
   end
 
-  def start_link(gen_pool, init_args \\ [], opts \\ []) do
-    gen_pool.start_link(init_args, opts)
+  def start_link(gen_pool, init_opts \\ [], process_opts \\ []) do
+    default_opts = gen_pool.__default_opts__()
+    opts = Keyword.merge([client_opts: init_opts], default_opts)
+
+    gen_pool.start_link(opts, Keyword.merge(process_opts, name: default_opts[:pool_module]))
   end
 
   def call(gen_pool, params) do
@@ -257,6 +129,10 @@ defmodule GenPool do
   def get_state(gen_pool) do
     gen_pool.__broker__()
     |> do_call(:__get_state__)
+  end
+
+  def get_children(gen_pool) do
+    GenServer.call(gen_pool, :get_children)
   end
 
   defp do_cast(broker, params) do
