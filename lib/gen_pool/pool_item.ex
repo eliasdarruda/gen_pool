@@ -23,6 +23,17 @@ defmodule GenPool.PoolItem do
   defp event_loop(tag, backend, parent_pid, opts) do
     {:await, ^tag, _} = :sbroker.async_ask_r(opts[:broker], self(), {self(), tag})
 
+    # TODO: Implement sregulator https://hexdocs.pm/sbroker/
+    # drop(Ref, Pid) ->
+    # case sregulator:continue(Pid, Ref) of
+    #     {go, Ref, Pid, _, _} ->
+    #         % continue loop with same Ref as before
+    #         loop(Ref, Pid);
+    #     {stop, _} ->
+    #         % process should stop its loop and Ref is removed from sregulator
+    #         stop()
+    # end.
+
     receive do
       {^tag, {:go, _ref, {:cast, _origin_pid, {:__stop__, reason}}, _, _}} ->
         state = GenPool.Backend.get(backend)
